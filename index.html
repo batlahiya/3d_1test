@@ -7,505 +7,146 @@
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #000;
-            overflow: hidden;
-        }
-
-        /* Loading Screen */
+        body { margin: 0; background: #000; font-family: sans-serif; overflow: hidden; }
+        .loading-overlay, .instructions, .controls, .status { position: fixed; z-index: 100; }
         .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: opacity 0.5s ease;
         }
-
-        .loading-overlay.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
+        .loading-overlay.hidden { opacity: 0; pointer-events: none; }
         .loader {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-left: 4px solid #ff6b6b;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
+            width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: #ff6b6b; border-radius: 50%; animation: spin 1s linear infinite;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            color: white;
-            font-size: 20px;
-            font-weight: 600;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .loading-subtitle {
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 16px;
-            text-align: center;
-            max-width: 300px;
-            line-height: 1.4;
-        }
-
-        /* Instructions Panel */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { color: white; font-size: 20px; font-weight: bold; margin: 15px 0; }
+        .loading-subtitle { color: #eee; font-size: 16px; text-align: center; max-width: 300px; }
         .instructions {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            color: white;
-            z-index: 100;
-            max-width: 400px;
-            margin: 0 auto;
-            transition: transform 0.3s ease;
+            top: 20px; left: 20px; right: 20px; max-width: 400px; margin: auto;
+            padding: 20px; border-radius: 15px; background: rgba(0, 0, 0, 0.85); color: white;
         }
-
-        .instructions.hidden {
-            transform: translateY(-120%);
-        }
-
-        .instructions-title {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #ff6b6b;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .instructions-text {
-            font-size: 14px;
-            line-height: 1.5;
-            margin-bottom: 15px;
-        }
-
+        .instructions.hidden { transform: translateY(-120%); transition: transform 0.3s ease; }
         .qr-preview {
-            width: 120px;
-            height: 120px;
-            background: white;
-            border-radius: 8px;
-            margin: 15px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: #333;
-            text-align: center;
-            border: 2px solid #ff6b6b;
+            width: 120px; height: 120px; background: white; color: #333;
+            margin: 15px auto; display: flex; justify-content: center; align-items: center;
+            font-size: 12px; text-align: center; border: 2px solid #ff6b6b; border-radius: 8px;
         }
-
-        /* Controls */
         .controls {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 15px;
-            z-index: 100;
+            bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px;
         }
-
         .control-btn {
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            border: 2px solid #ff6b6b;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            background: rgba(0,0,0,0.8); border: 2px solid #ff6b6b; color: white;
+            padding: 10px 15px; border-radius: 25px; font-weight: 600; cursor: pointer;
         }
-
-        .control-btn:hover {
-            background: #ff6b6b;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
-        }
-
-        /* Status Indicator */
+        .control-btn:hover { background: #ff6b6b; box-shadow: 0 4px 15px rgba(255,107,107,0.3); }
         .status {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 10px 15px;
-            color: white;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
+            top: 20px; right: 20px; background: rgba(0,0,0,0.8); border-radius: 20px;
+            padding: 10px 15px; display: flex; align-items: center; gap: 8px; color: white;
         }
-
         .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #ff6b6b;
+            width: 8px; height: 8px; border-radius: 50%; background: #ff6b6b;
             animation: pulse 2s infinite;
         }
-
-        .status-dot.found {
-            background: #4ecdc4;
-            animation: none;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* Mobile optimizations */
+        .status-dot.found { background: #4ecdc4; animation: none; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        a-scene { width: 100%; height: 100%; }
         @media (max-width: 768px) {
-            .instructions {
-                left: 10px;
-                right: 10px;
-                top: 10px;
-                padding: 15px;
-            }
-
-            .controls {
-                bottom: 10px;
-                left: 10px;
-                right: 10px;
-                transform: none;
-                justify-content: center;
-                flex-wrap: wrap;
-            }
-
-            .control-btn {
-                flex: 1;
-                min-width: 120px;
-                justify-content: center;
-            }
-        }
-
-        /* AR Scene styling */
-        a-scene {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Hide A-Frame inspector button */
-        .a-inspect-button {
-            display: none !important;
+            .instructions { top: 10px; left: 10px; right: 10px; padding: 15px; }
+            .controls { bottom: 10px; flex-wrap: wrap; justify-content: center; }
+            .control-btn { flex: 1; min-width: 100px; }
         }
     </style>
 </head>
 <body>
-    <!-- Loading Screen -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loader"></div>
         <div class="loading-text">Starting AR Camera</div>
         <div class="loading-subtitle">Point your camera at the QR code marker to see the cannon</div>
     </div>
 
-    <!-- Instructions Panel -->
     <div class="instructions" id="instructions">
-        <div class="instructions-title">
-            📱 AR Instructions
-        </div>
-        <div class="instructions-text">
-            1. Print or display the QR marker below<br>
-            2. Point your camera at the marker<br>
-            3. Watch the 6-Pounder Cannon appear!
-        </div>
-        <div class="qr-preview" id="qrPreview">
-            QR Marker<br>
-            (Print this pattern)
-        </div>
+        <div><strong>📱 AR Instructions</strong></div>
+        <div>1. Print or display the marker<br>2. Point your camera<br>3. See the 6-Pounder Cannon!</div>
+        <div class="qr-preview">HIRO Marker<br><small>Print this</small></div>
     </div>
 
-    <!-- Status Indicator -->
     <div class="status" id="status">
         <div class="status-dot" id="statusDot"></div>
         <span id="statusText">Searching for marker...</span>
     </div>
 
-    <!-- Controls -->
     <div class="controls">
-        <button class="control-btn" onclick="toggleInstructions()">
-            ❓ Help
-        </button>
-        <button class="control-btn" onclick="downloadMarker()">
-            📄 Get Marker
-        </button>
-        <button class="control-btn" onclick="toggleCamera()">
-            📷 Camera
-        </button>
+        <button class="control-btn" onclick="toggleInstructions()">❓ Help</button>
+        <button class="control-btn" onclick="downloadMarker()">📄 Get Marker</button>
+        <button class="control-btn" onclick="toggleCamera()">📷 Camera</button>
     </div>
 
-    <!-- AR Scene -->
-    <a-scene
-        embedded
-        arjs="trackingMethod: hiro; sourceType: webcam; displayWidth: 1280; displayHeight: 960; debugUIEnabled: false;"
-        vr-mode-ui="enabled: false"
-        renderer="logarithmicDepthBuffer: true; colorManagement: true; sortObjects: true;"
-        loading-screen="enabled: false"
-        id="arScene">
-        
-        <!-- Assets -->
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false">
         <a-assets>
-            <!-- Cannon Model -->
             <a-asset-item id="cannonModel" src="./cannon.glb"></a-asset-item>
-            
-            <!-- Fallback Models -->
-            <a-asset-item id="astronautModel" src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"></a-asset-item>
-            <a-asset-item id="helmetModel" src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"></a-asset-item>
+            <a-asset-item id="fallbackModel" src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"></a-asset-item>
         </a-assets>
 
-        <!-- Marker-based AR -->
         <a-marker preset="hiro" id="marker">
-            <!-- 3D Cannon Model -->
-            <a-entity
-                id="cannonEntity"
-                gltf-model="#cannonModel"
-                scale="0.5 0.5 0.5"
-                position="0 0.5 0"
-                rotation="0 0 0"
-                animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"
-                shadow="cast: true; receive: false">
-            </a-entity>
-
-            <!-- Lighting -->
-            <a-light type="ambient" color="#404040" intensity="0.4"></a-light>
-            <a-light type="directional" position="2 4 2" color="#ffffff" intensity="0.8" shadow="cast: true"></a-light>
-            
-            <!-- Ground plane for shadows -->
-            <a-plane 
-                position="0 0 0" 
-                rotation="-90 0 0" 
-                width="4" 
-                height="4" 
-                color="#555555" 
-                transparent="true" 
-                opacity="0.3"
-                shadow="receive: true">
-            </a-plane>
-
-            <!-- Interactive elements -->
-            <a-text 
-                value="6-Pounder Brass Cannon\n18th Century Artillery" 
-                position="0 2 0" 
-                align="center" 
-                color="#ff6b6b"
-                scale="2 2 2"
-                font="roboto">
-            </a-text>
-
-            <!-- Decorative elements -->
-            <a-ring 
-                position="0 0.1 0" 
-                radius-inner="1.5" 
-                radius-outer="1.8" 
-                color="#ff6b6b" 
-                opacity="0.3"
-                animation="property: rotation; to: 0 360 0; loop: true; dur: 20000; easing: linear">
-            </a-ring>
+            <a-entity id="cannonEntity" gltf-model="#cannonModel" position="0 0.5 0" scale="0.5 0.5 0.5"
+                      animation="property: rotation; to: 0 360 0; loop: true; dur: 10000;"></a-entity>
+            <a-light type="ambient" intensity="0.4"></a-light>
+            <a-light type="directional" intensity="0.8" position="2 4 2"></a-light>
+            <a-plane position="0 0 0" rotation="-90 0 0" width="4" height="4" color="#555"
+                     opacity="0.3" shadow="receive: true"></a-plane>
         </a-marker>
 
-        <!-- Camera -->
-        <a-entity camera id="arCamera"></a-entity>
+        <a-entity camera></a-entity>
     </a-scene>
 
     <script>
-        let isInstructionsVisible = true;
-        let markerFound = false;
-        let cameraActive = true;
-        let modelLoadAttempt = 0;
-
-        // DOM elements
-        const loadingOverlay = document.getElementById('loadingOverlay');
+        const overlay = document.getElementById('loadingOverlay');
         const instructions = document.getElementById('instructions');
-        const status = document.getElementById('status');
-        const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
-        const arScene = document.getElementById('arScene');
+        const statusDot = document.getElementById('statusDot');
         const marker = document.getElementById('marker');
-        const cannonEntity = document.getElementById('cannonEntity');
+        const cannon = document.getElementById('cannonEntity');
+        let cameraOn = true;
 
-        // Initialize AR
-        function initializeAR() {
-            // Hide loading screen after a short delay
-            setTimeout(() => {
-                loadingOverlay.classList.add('hidden');
-            }, 2000);
+        window.onload = () => {
+            setTimeout(() => overlay.classList.add('hidden'), 2000);
+        };
 
-            // Create QR code marker preview
-            generateMarkerPreview();
+        marker.addEventListener('markerFound', () => {
+            statusText.textContent = 'Marker detected!';
+            statusDot.classList.add('found');
+        });
 
-            // Set up marker events
-            marker.addEventListener('markerFound', function() {
-                markerFound = true;
-                statusDot.classList.add('found');
-                statusText.textContent = 'Marker detected!';
-                
-                // Try to load the cannon model
-                loadCannonModel();
-            });
+        marker.addEventListener('markerLost', () => {
+            statusText.textContent = 'Searching for marker...';
+            statusDot.classList.remove('found');
+        });
 
-            marker.addEventListener('markerLost', function() {
-                markerFound = false;
-                statusDot.classList.remove('found');
-                statusText.textContent = 'Searching for marker...';
-            });
-        }
-
-        // Load cannon model with fallbacks
-        function loadCannonModel() {
-            const models = ['#cannonModel', '#astronautModel', '#helmetModel'];
-            
-            if (modelLoadAttempt < models.length) {
-                cannonEntity.setAttribute('gltf-model', models[modelLoadAttempt]);
-                
-                // Listen for model load events
-                cannonEntity.addEventListener('model-loaded', function() {
-                    console.log('Model loaded successfully:', models[modelLoadAttempt]);
-                    statusText.textContent = 'Cannon loaded!';
-                });
-
-                cannonEntity.addEventListener('model-error', function() {
-                    console.warn('Failed to load model:', models[modelLoadAttempt]);
-                    modelLoadAttempt++;
-                    if (modelLoadAttempt < models.length) {
-                        setTimeout(() => loadCannonModel(), 1000);
-                    } else {
-                        statusText.textContent = 'Model load failed';
-                    }
-                });
-            }
-        }
-
-        // Generate marker preview
-        function generateMarkerPreview() {
-            const qrPreview = document.getElementById('qrPreview');
-            qrPreview.innerHTML = `
-                <div style="font-size: 10px; line-height: 1.2;">
-                    📱 HIRO Marker<br>
-                    <small>Print or display<br>this standard<br>AR marker</small>
-                </div>
-            `;
-        }
-
-        // Control functions
         function toggleInstructions() {
-            isInstructionsVisible = !isInstructionsVisible;
-            if (isInstructionsVisible) {
-                instructions.classList.remove('hidden');
-            } else {
-                instructions.classList.add('hidden');
-            }
+            instructions.classList.toggle('hidden');
         }
 
         function downloadMarker() {
-            // Create a link to download the standard Hiro marker
             const link = document.createElement('a');
             link.href = 'https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png';
             link.download = 'hiro-marker.png';
-            link.target = '_blank';
-            document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link);
-            
-            // Show instructions
-            alert('Print the downloaded marker on a white sheet of paper for best results!');
         }
 
         function toggleCamera() {
-            if (cameraActive) {
-                // Pause AR
-                arScene.pause();
+            const scene = document.querySelector('a-scene');
+            if (cameraOn) {
+                scene.pause();
                 statusText.textContent = 'Camera paused';
-                cameraActive = false;
             } else {
-                // Resume AR
-                arScene.play();
+                scene.play();
                 statusText.textContent = 'Camera active';
-                cameraActive = true;
             }
+            cameraOn = !cameraOn;
         }
-
-        // Auto-hide instructions after 10 seconds
-        setTimeout(() => {
-            if (isInstructionsVisible && !markerFound) {
-                instructions.classList.add('hidden');
-                isInstructionsVisible = false;
-            }
-        }, 10000);
-
-        // Handle orientation changes
-        window.addEventListener('orientationchange', function() {
-            setTimeout(() => {
-                if (arScene.is('ar-mode')) {
-                    location.reload();
-                }
-            }, 500);
-        });
-
-        // Initialize when page loads
-        window.addEventListener('load', initializeAR);
-
-        // Handle visibility changes (when user switches tabs)
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                arScene.pause();
-            } else {
-                arScene.play();
-            }
-        });
-
-        // Performance monitoring
-        let fpsCounter = 0;
-        let lastFpsTime = Date.now();
-        
-        setInterval(() => {
-            fpsCounter++;
-            const now = Date.now();
-            if (now - lastFpsTime >= 1000) {
-                const fps = Math.round((fpsCounter * 1000) / (now - lastFpsTime));
-                if (fps < 20 && markerFound) {
-                    console.warn('Low FPS detected:', fps);
-                    // Could reduce model quality here
-                }
-                fpsCounter = 0;
-                lastFpsTime = now;
-            }
-        }, 100);
-
-        // Debug info (remove in production)
-        console.log('QR AR Cannon Viewer initialized');
-        console.log('Point camera at Hiro marker to see the cannon');
     </script>
 </body>
 </html>
