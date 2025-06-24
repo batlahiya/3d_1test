@@ -1,30 +1,582 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AR Cannon Viewer</title>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
-      body {
-        margin: 0;
-      }
-      model-viewer {
-        width: 100vw;
-        height: 100vh;
-      }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            --progress-bar-color: #ff6b6b;
+            --progress-bar-height: 4px;
+        }
+
+        /* Loading Screen */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid #ff6b6b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .loading-progress {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+
+        /* Controls Panel */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 15px 25px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .controls.hidden {
+            transform: translateX(-50%) translateY(100px);
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .control-btn.ar-btn {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+        }
+
+        .control-btn.ar-btn:hover {
+            box-shadow: 0 8px 25px rgba(78, 205, 196, 0.4);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Info Panel */
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px;
+            color: white;
+            max-width: 300px;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .info-panel.hidden {
+            transform: translateX(100%);
+        }
+
+        .info-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #ff6b6b;
+        }
+
+        .info-text {
+            font-size: 14px;
+            line-height: 1.4;
+            opacity: 0.9;
+        }
+
+        /* Error State */
+        .error-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            color: white;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .error-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            font-size: 16px;
+            opacity: 0.8;
+            margin-bottom: 30px;
+            max-width: 400px;
+        }
+
+        .retry-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            .controls {
+                bottom: 20px;
+                left: 20px;
+                right: 20px;
+                transform: none;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .controls.hidden {
+                transform: translateY(100px);
+            }
+
+            .control-btn {
+                width: 100%;
+                min-width: auto;
+            }
+
+            .info-panel {
+                top: 20px;
+                left: 20px;
+                right: 20px;
+                max-width: none;
+            }
+
+            .info-panel.hidden {
+                transform: translateY(-100%);
+            }
+        }
+
+        /* AR Button Styling */
+        model-viewer::part(default-ar-button) {
+            display: none;
+        }
+
+        /* Hotspot Animation */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .hotspot {
+            background: rgba(255, 107, 107, 0.8);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: pulse 2s infinite;
+            cursor: pointer;
+        }
     </style>
-  </head>
-  <body>
-    <model-viewer
-      src="cannon.glb"
-      ar
-      ar-modes="scene-viewer webxr quick-look"
-      camera-controls
-      auto-rotate
-      shadow-intensity="1"
-      alt="6 Pounder Brass Cannon"
-    >
-    </model-viewer>
-  </body>
+</head>
+<body>
+    <div class="container">
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loader"></div>
+            <div class="loading-text">Loading 6 Pounder Cannon</div>
+            <div class="loading-progress" id="loadingProgress">Preparing 3D model...</div>
+        </div>
+
+        <!-- Error Overlay -->
+        <div class="error-overlay" id="errorOverlay">
+            <div class="error-icon">⚠️</div>
+            <div class="error-title">Loading Failed</div>
+            <div class="error-message" id="errorMessage">
+                Unable to load the 3D model. Please check your internet connection and try again.
+            </div>
+            <button class="retry-btn" onclick="retryLoading()">Retry</button>
+        </div>
+
+        <!-- Model Viewer -->
+        <model-viewer
+            id="cannonViewer"
+            src=""
+            alt="6 Pounder Brass Cannon"
+            ar
+            ar-modes="scene-viewer webxr quick-look"
+            camera-controls
+            auto-rotate
+            auto-rotate-delay="1000"
+            rotation-per-second="30deg"
+            shadow-intensity="1"
+            shadow-softness="0.75"
+            exposure="1"
+            tone-mapping="neutral"
+            camera-orbit="45deg 75deg 2.5m"
+            min-camera-orbit="auto auto 1m"
+            max-camera-orbit="auto auto 10m"
+            interaction-prompt="auto"
+            interaction-prompt-threshold="2000"
+        >
+            <!-- Hotspots for interactive elements -->
+            <button class="hotspot" slot="hotspot-1" data-position="0.5m 0.2m 0.5m" data-normal="0m 1m 0m">
+                <div class="annotation">Cannon Barrel</div>
+            </button>
+            <button class="hotspot" slot="hotspot-2" data-position="-0.3m 0m 0.8m" data-normal="0m 1m 0m">
+                <div class="annotation">Wheel Assembly</div>
+            </button>
+
+            <!-- Custom AR Button -->
+            <button slot="ar-button" class="control-btn ar-btn" id="arButton">
+                📱 View in AR
+            </button>
+        </model-viewer>
+
+        <!-- Info Panel -->
+        <div class="info-panel" id="infoPanel">
+            <div class="info-title">6 Pounder Brass Cannon</div>
+            <div class="info-text">
+                Historic artillery piece used in 18th-19th century warfare. 
+                Drag to rotate • Pinch to zoom • Tap AR to place in your space
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls" id="controls">
+            <button class="control-btn" onclick="toggleAutoRotate()">
+                🔄 <span id="rotateText">Pause Rotation</span>
+            </button>
+            <button class="control-btn" onclick="resetCamera()">
+                🎯 Reset View
+            </button>
+            <button class="control-btn" onclick="toggleInfo()">
+                ℹ️ Info
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const modelViewer = document.getElementById('cannonViewer');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const errorOverlay = document.getElementById('errorOverlay');
+        const loadingProgress = document.getElementById('loadingProgress');
+        const controls = document.getElementById('controls');
+        const infoPanel = document.getElementById('infoPanel');
+        
+        let isAutoRotating = true;
+        let loadingTimeout;
+        let modelLoaded = false;
+
+        // Available model URLs to try
+        const modelUrls = [
+            './cannon.glb', // Your original file
+            'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+            'https://modelviewer.dev/shared-assets/models/NeilArmstrong.glb',
+            'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf'
+        ];
+        let currentModelIndex = 0;
+
+        // Loading states
+        const loadingStates = [
+            'Preparing 3D model...',
+            'Loading textures...',
+            'Optimizing for AR...',
+            'Almost ready...'
+        ];
+        let currentStateIndex = 0;
+
+        // Simulate loading progress
+        function updateLoadingState() {
+            if (currentStateIndex < loadingStates.length) {
+                loadingProgress.textContent = loadingStates[currentStateIndex];
+                currentStateIndex++;
+                setTimeout(updateLoadingState, 800);
+            }
+        }
+
+        // Initialize with first model
+        function initializeModel() {
+            loadingOverlay.classList.remove('hidden');
+            errorOverlay.style.display = 'none';
+            controls.classList.add('hidden');
+            
+            // Reset loading state
+            currentStateIndex = 0;
+            modelLoaded = false;
+            
+            // Try to load the model
+            loadModel(modelUrls[currentModelIndex]);
+        }
+
+        function loadModel(url) {
+            clearTimeout(loadingTimeout);
+            
+            // Set shorter timeout for faster fallback
+            loadingTimeout = setTimeout(() => {
+                if (!modelLoaded) {
+                    tryNextModel();
+                }
+            }, 8000);
+            
+            modelViewer.src = url;
+            updateLoadingState();
+        }
+
+        function tryNextModel() {
+            currentModelIndex++;
+            if (currentModelIndex < modelUrls.length) {
+                loadingProgress.textContent = `Trying alternative model (${currentModelIndex + 1}/${modelUrls.length})...`;
+                setTimeout(() => loadModel(modelUrls[currentModelIndex]), 1000);
+            } else {
+                showError('Unable to load any 3D model. Please check your internet connection or provide a valid model file.');
+            }
+        }
+
+        // Start loading state animation
+        // updateLoadingState(); // This will be called by loadModel()
+
+        // Model loaded successfully
+        modelViewer.addEventListener('load', () => {
+            clearTimeout(loadingTimeout);
+            modelLoaded = true;
+            setTimeout(() => {
+                loadingOverlay.classList.add('hidden');
+                controls.classList.remove('hidden');
+                
+                // Add environment after model loads
+                if (currentModelIndex > 0) {
+                    // Only add environment for fallback models
+                    modelViewer.environmentImage = 'https://modelviewer.dev/shared-assets/environments/spruit_sunrise_1k_HDR.hdr';
+                }
+            }, 500);
+        });
+
+        // Model loading progress
+        modelViewer.addEventListener('progress', (event) => {
+            if (event.detail.totalProgress === 1) {
+                loadingProgress.textContent = 'Finalizing...';
+            } else {
+                const progress = Math.round(event.detail.totalProgress * 100);
+                loadingProgress.textContent = `Loading... ${progress}%`;
+            }
+        });
+
+        // Handle errors
+        modelViewer.addEventListener('error', (event) => {
+            clearTimeout(loadingTimeout);
+            if (!modelLoaded) {
+                tryNextModel();
+            }
+        });
+
+        // AR session events
+        modelViewer.addEventListener('ar-status', (event) => {
+            if (event.detail.status === 'session-started') {
+                controls.classList.add('hidden');
+                infoPanel.classList.add('hidden');
+            } else if (event.detail.status === 'not-presenting') {
+                controls.classList.remove('hidden');
+            }
+        });
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            loadingOverlay.classList.add('hidden');
+            errorOverlay.style.display = 'flex';
+        }
+
+        function retryLoading() {
+            currentModelIndex = 0; // Start from first model again
+            initializeModel();
+        }
+
+        // Initialize the model viewer
+        initializeModel();
+
+        function toggleAutoRotate() {
+            const rotateText = document.getElementById('rotateText');
+            if (isAutoRotating) {
+                modelViewer.autoRotate = false;
+                rotateText.textContent = 'Start Rotation';
+                isAutoRotating = false;
+            } else {
+                modelViewer.autoRotate = true;
+                rotateText.textContent = 'Pause Rotation';
+                isAutoRotating = true;
+            }
+        }
+
+        function resetCamera() {
+            modelViewer.cameraOrbit = '45deg 75deg 2.5m';
+            modelViewer.fieldOfView = 'auto';
+        }
+
+        function toggleInfo() {
+            infoPanel.classList.toggle('hidden');
+        }
+
+        // Handle camera changes
+        modelViewer.addEventListener('camera-change', () => {
+            // Optional: Add camera position logging or updates
+        });
+
+        // Touch and interaction optimizations
+        let touchStartTime = 0;
+        modelViewer.addEventListener('touchstart', () => {
+            touchStartTime = Date.now();
+        });
+
+        modelViewer.addEventListener('touchend', () => {
+            const touchDuration = Date.now() - touchStartTime;
+            if (touchDuration < 200) {
+                // Quick tap - could trigger info or other actions
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (event) => {
+            switch(event.key) {
+                case ' ':
+                    event.preventDefault();
+                    toggleAutoRotate();
+                    break;
+                case 'r':
+                    resetCamera();
+                    break;
+                case 'i':
+                    toggleInfo();
+                    break;
+            }
+        });
+
+        // Optimize for mobile
+        if ('ontouchstart' in window) {
+            document.body.style.webkitUserSelect = 'none';
+            document.body.style.webkitTouchCallout = 'none';
+        }
+
+        // Performance monitoring
+        let frameCount = 0;
+        let lastTime = performance.now();
+        
+        function monitorPerformance() {
+            frameCount++;
+            const currentTime = performance.now();
+            
+            if (currentTime - lastTime >= 1000) {
+                const fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+                if (fps < 30) {
+                    console.warn('Low FPS detected:', fps);
+                    // Could adjust quality settings here
+                }
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+            
+            requestAnimationFrame(monitorPerformance);
+        }
+        
+        monitorPerformance();
+    </script>
+</body>
 </html>
