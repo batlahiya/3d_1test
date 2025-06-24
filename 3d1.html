@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>AR Cannon Viewer</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+      body { margin: 0; }
+      model-viewer {
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <model-viewer
+      src="6_Pounder_Brass_Cannon.glb"
+      ar
+      ar-modes="scene-viewer webxr quick-look"
+      camera-controls
+      auto-rotate
+      shadow-intensity="1"
+      alt="6 Pounder Brass Cannon">
+    </model-viewer>
+  </body>
+</html>
