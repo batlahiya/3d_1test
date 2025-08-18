@@ -3,150 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code AR Cannon Viewer</title>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.min.js"></script>
+    <title>Interactive 3D Model</title>
     <style>
-        body { margin: 0; background: #000; font-family: sans-serif; overflow: hidden; }
-        .loading-overlay, .instructions, .controls, .status { position: fixed; z-index: 100; }
-        .loading-overlay {
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 0.5s ease;
-        }
-        .loading-overlay.hidden { opacity: 0; pointer-events: none; }
-        .loader {
-            width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.1);
-            border-left-color: #ff6b6b; border-radius: 50%; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .loading-text { color: white; font-size: 20px; font-weight: bold; margin: 15px 0; }
-        .loading-subtitle { color: #eee; font-size: 16px; text-align: center; max-width: 300px; }
-        .instructions {
-            top: 20px; left: 20px; right: 20px; max-width: 400px; margin: auto;
-            padding: 20px; border-radius: 15px; background: rgba(0, 0, 0, 0.85); color: white;
-        }
-        .instructions.hidden { transform: translateY(-120%); transition: transform 0.3s ease; }
-        .qr-preview {
-            width: 120px; height: 120px; background: white; color: #333;
-            margin: 15px auto; display: flex; justify-content: center; align-items: center;
-            font-size: 12px; text-align: center; border: 2px solid #ff6b6b; border-radius: 8px;
-        }
-        .controls {
-            bottom: 20px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 10px;
-        }
-        .control-btn {
-            background: rgba(0,0,0,0.8); border: 2px solid #ff6b6b; color: white;
-            padding: 10px 15px; border-radius: 25px; font-weight: 600; cursor: pointer;
-        }
-        .control-btn:hover { background: #ff6b6b; box-shadow: 0 4px 15px rgba(255,107,107,0.3); }
-        .status {
-            top: 20px; right: 20px; background: rgba(0,0,0,0.8); border-radius: 20px;
-            padding: 10px 15px; display: flex; align-items: center; gap: 8px; color: white;
-        }
-        .status-dot {
-            width: 8px; height: 8px; border-radius: 50%; background: #ff6b6b;
-            animation: pulse 2s infinite;
-        }
-        .status-dot.found { background: #4ecdc4; animation: none; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        a-scene { width: 100%; height: 100%; }
-        @media (max-width: 768px) {
-            .instructions { top: 10px; left: 10px; right: 10px; padding: 15px; }
-            .controls { bottom: 10px; flex-wrap: wrap; justify-content: center; }
-            .control-btn { flex: 1; min-width: 100px; }
-        }
+        body { margin: 0; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loader"></div>
-        <div class="loading-text">Starting AR Camera</div>
-        <div class="loading-subtitle">Point your camera at the QR code marker to see the cannon</div>
-    </div>
-
-    <div class="instructions" id="instructions">
-        <div><strong>📱 AR Instructions</strong></div>
-        <div>1. Print or display the marker<br>2. Point your camera<br>3. See the 6-Pounder Cannon!</div>
-        <div class="qr-preview">HIRO Marker<br><small>Print this</small></div>
-    </div>
-
-    <div class="status" id="status">
-        <div class="status-dot" id="statusDot"></div>
-        <span id="statusText">Searching for marker...</span>
-    </div>
-
-    <div class="controls">
-        <button class="control-btn" onclick="toggleInstructions()">❓ Help</button>
-        <button class="control-btn" onclick="downloadMarker()">📄 Get Marker</button>
-        <button class="control-btn" onclick="toggleCamera()">📷 Camera</button>
-    </div>
-
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false">
-        <a-assets>
-            <a-asset-item id="cannonModel" src="./cannon.glb"></a-asset-item>
-            <a-asset-item id="fallbackModel" src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"></a-asset-item>
-        </a-assets>
-
-        <a-marker preset="hiro" id="marker">
-            <a-entity id="cannonEntity" gltf-model="#cannonModel" position="0 0.5 0" scale="0.5 0.5 0.5"
-                      animation="property: rotation; to: 0 360 0; loop: true; dur: 10000;"></a-entity>
-            <a-light type="ambient" intensity="0.4"></a-light>
-            <a-light type="directional" intensity="0.8" position="2 4 2"></a-light>
-            <a-plane position="0 0 0" rotation="-90 0 0" width="4" height="4" color="#555"
-                     opacity="0.3" shadow="receive: true"></a-plane>
-        </a-marker>
-
-        <a-entity camera></a-entity>
-    </a-scene>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.135.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.135.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.135.0/examples/js/loaders/GLTFLoader.js"></script>
 
     <script>
-        const overlay = document.getElementById('loadingOverlay');
-        const instructions = document.getElementById('instructions');
-        const statusText = document.getElementById('statusText');
-        const statusDot = document.getElementById('statusDot');
-        const marker = document.getElementById('marker');
-        const cannon = document.getElementById('cannonEntity');
-        let cameraOn = true;
+        // Set up the scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-        window.onload = () => {
-            setTimeout(() => overlay.classList.add('hidden'), 2000);
-        };
+        // Set the background color of the scene to white
+        renderer.setClearColor(0xffffff); // White background
 
-        marker.addEventListener('markerFound', () => {
-            statusText.textContent = 'Marker detected!';
-            statusDot.classList.add('found');
+        // Add OrbitControls for camera movement
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+        // Add ambient light (soft light to illuminate all objects)
+        const ambientLight = new THREE.AmbientLight(0x404040, 5); // Ambient light with intensity of 1
+        scene.add(ambientLight);
+
+        // Add a stronger directional light for more intense lighting
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 5); // Brighter light intensity
+        directionalLight.position.set(5, 5, 5); // Position the light at a higher angle
+        scene.add(directionalLight);
+
+        // Optional: Add a point light for additional lighting, closer to the objects
+        const pointLight = new THREE.PointLight(0xffffff, 5, 300); // White light with intensity 1 and distance 100
+        pointLight.position.set(0, 0, 10); // Position close to the scene center
+        scene.add(pointLight);
+
+        // Create a group to hold both the model and cube
+        const group = new THREE.Group();
+
+        // Add a default cube for debugging if the model is not loading
+        const geometry = new THREE.BoxGeometry(1, 1, 1); // Adjust size as needed
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const cube = new THREE.Mesh(geometry, material);
+        cube.position.set(0, 0, 0);  // Set cube position at the origin
+        group.add(cube);  // Add cube to the group
+
+        // Load the 3D model (GLTF format)
+        const loader = new THREE.GLTFLoader();
+        loader.load('statueglb2.glb', function(gltf) {
+            gltf.scene.position.set(0, 0, 0);  // Position the model at the origin
+            gltf.scene.rotation.set(0, Math.PI, 0); // Rotate model 180 degrees around the Y-axis to fix rotation
+            group.add(gltf.scene);  // Add the model to the group
+            scene.add(group);  // Add the group to the scene
+            gltf.scene.scale.set(1, 1, 1); // Scale the model as needed
+        }, undefined, function(error) {
+            console.error('Error loading model:', error);
         });
 
-        marker.addEventListener('markerLost', () => {
-            statusText.textContent = 'Searching for marker...';
-            statusDot.classList.remove('found');
+        // Set the camera position
+        camera.position.set(0, 0, 5);  // Position the camera
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); // Update controls
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle window resizing
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
         });
-
-        function toggleInstructions() {
-            instructions.classList.toggle('hidden');
-        }
-
-        function downloadMarker() {
-            const link = document.createElement('a');
-            link.href = 'https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png';
-            link.download = 'hiro-marker.png';
-            link.click();
-        }
-
-        function toggleCamera() {
-            const scene = document.querySelector('a-scene');
-            if (cameraOn) {
-                scene.pause();
-                statusText.textContent = 'Camera paused';
-            } else {
-                scene.play();
-                statusText.textContent = 'Camera active';
-            }
-            cameraOn = !cameraOn;
-        }
     </script>
 </body>
 </html>
