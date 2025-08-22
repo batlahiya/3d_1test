@@ -54,7 +54,7 @@
 
         // Load the 3D model (GLTF format)
         const loader = new THREE.GLTFLoader();
-        loader.load('6.glb', function(gltf) {
+        loader.load('statueglb2.glb', function(gltf) {
             gltf.scene.position.set(0, 0, 0);  // Position the model at the origin
             gltf.scene.rotation.set(0, Math.PI, 0); // Rotate model 180 degrees around the Y-axis to fix rotation
             group.add(gltf.scene);  // Add the model to the group
@@ -84,4 +84,3 @@
     </script>
 </body>
 </html>
-
